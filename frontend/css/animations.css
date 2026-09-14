@@ -1,0 +1,367 @@
+/* =========================
+   INTRO
+========================= */
+
+.intro {
+    position: fixed;
+
+    inset: 0;
+
+    background: #08090b;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-direction: column;
+
+    z-index: 999;
+
+    animation: introExit 1.2s ease 2.2s forwards;
+}
+
+.intro p {
+    margin-top: 25px;
+
+    font-size: 11px;
+
+    letter-spacing: 5px;
+
+    color: #8c8f98;
+
+    animation: introText 1s ease forwards;
+}
+
+.intro-signal {
+    width: 18px;
+    height: 18px;
+
+    border-radius: 50%;
+
+    border: 1px solid #8da9ff;
+
+    box-shadow:
+        0 0 25px rgba(141, 169, 255, 0.7);
+
+    animation:
+        signalPulse 1.5s ease infinite;
+}
+
+
+/* =========================
+   HERO ENTRANCE
+========================= */
+
+.hero-content {
+    opacity: 0;
+
+    transform: translateY(40px);
+
+    animation:
+        heroReveal 1.2s ease 2.7s forwards;
+}
+
+.hero-visual {
+    opacity: 0;
+
+    transform: scale(0.8);
+
+    animation:
+        visualReveal 1.5s ease 2.8s forwards;
+}
+
+
+/* =========================
+   RINGS
+========================= */
+
+.ring-one {
+    animation: rotateRing 18s linear infinite;
+}
+
+.ring-two {
+    animation: rotateRingReverse 28s linear infinite;
+}
+
+.ring-three {
+    animation: rotateRing 40s linear infinite;
+}
+
+
+/* =========================
+   SHIELD
+========================= */
+
+.shield {
+    animation: shieldFloat 5s ease-in-out infinite;
+}
+
+
+/* =========================
+   SIGNALS
+========================= */
+
+.signal-one {
+    animation: signalMoveOne 5s ease-in-out infinite;
+}
+
+.signal-two {
+    animation: signalMoveTwo 6s ease-in-out infinite;
+}
+
+.signal-three {
+    animation: signalMoveThree 7s ease-in-out infinite;
+}
+
+
+/* =========================
+   KEYFRAMES
+========================= */
+
+@keyframes signalPulse {
+
+    0% {
+        transform: scale(0.5);
+        opacity: 0.3;
+    }
+
+    50% {
+        transform: scale(1.5);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(0.5);
+        opacity: 0.3;
+    }
+}
+
+@keyframes introText {
+
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes introExit {
+
+    to {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+@keyframes heroReveal {
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes visualReveal {
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes shieldFloat {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-15px);
+    }
+}
+
+@keyframes rotateRing {
+
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes rotateRingReverse {
+
+    from {
+        transform: rotate(360deg);
+    }
+
+    to {
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes signalMoveOne {
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    50% {
+        transform: translate(40px, -30px);
+    }
+}
+
+@keyframes signalMoveTwo {
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    50% {
+        transform: translate(-30px, 35px);
+    }
+}
+
+@keyframes signalMoveThree {
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    50% {
+        transform: translate(25px, 20px);
+    }
+}
+
+
+/* ACCESSIBILITY */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+    }
+}
+/* =========================
+   PROBLEM REVEAL
+========================= */
+
+.problem-intro {
+    animation: problemReveal linear both;
+
+    animation-timeline: view();
+
+    animation-range: entry 10% cover 35%;
+}
+
+.message-window {
+    animation: messageReveal linear both;
+
+    animation-timeline: view();
+
+    animation-range: entry 10% cover 40%;
+}
+
+.signal-card {
+    animation: signalReveal linear both;
+
+    animation-timeline: view();
+
+    animation-range: entry 10% cover 45%;
+}
+
+.problem-statement {
+    animation: statementReveal linear both;
+
+    animation-timeline: view();
+
+    animation-range: entry 10% cover 40%;
+}
+
+
+@keyframes problemReveal {
+
+    from {
+        opacity: 0;
+
+        transform:
+            translateY(80px);
+    }
+
+    to {
+        opacity: 1;
+
+        transform:
+            translateY(0);
+    }
+}
+
+
+@keyframes messageReveal {
+
+    from {
+        opacity: 0;
+
+        transform:
+            translateY(100px)
+            scale(.94);
+    }
+
+    to {
+        opacity: 1;
+
+        transform:
+            translateY(0)
+            scale(1);
+    }
+}
+
+
+@keyframes signalReveal {
+
+    from {
+        opacity: 0;
+
+        transform:
+            translateY(50px);
+    }
+
+    to {
+        opacity: 1;
+
+        transform:
+            translateY(0);
+    }
+}
+
+
+@keyframes statementReveal {
+
+    from {
+        opacity: 0;
+
+        transform:
+            scale(.9);
+    }
+
+    to {
+        opacity: 1;
+
+        transform:
+            scale(1);
+    }
+}
