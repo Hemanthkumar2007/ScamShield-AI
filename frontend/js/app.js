@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // BACKEND
     // =========================================================
 
-    const BACKEND_URL = "http://localhost:3000";
+    const BACKEND_URL = "https://scamshield-backend-y5rp.onrender.com";
 
 
     // =========================================================
