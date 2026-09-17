@@ -29,7 +29,7 @@ const genAI =
 
 const model =
     genAI.getGenerativeModel({
-        model: "gemini-3.6-flash"
+        model: "gemini-3.7-flash"
     });
 
 
