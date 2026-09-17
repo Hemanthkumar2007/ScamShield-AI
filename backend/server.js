@@ -29,7 +29,7 @@ const genAI =
 
 const model =
     genAI.getGenerativeModel({
-        model: "gemini-3.7-flash"
+        model: "gemini-2.5-flash"
     });
 
 
@@ -263,10 +263,60 @@ ${cleanText}
         );
 
 
-        const result =
+        let result;
+
+for (let attempt = 1; attempt <= 3; attempt++) {
+
+    try {
+
+        console.log(
+            `🔄 Gemini attempt ${attempt}/3`
+        );
+
+        result =
             await model.generateContent(
                 prompt
             );
+
+        break;
+
+    } catch (error) {
+
+        console.error(
+            `⚠️ Gemini attempt ${attempt} failed:`,
+            error.status,
+            error.statusText
+        );
+
+        if (
+            error.status === 503 &&
+            attempt < 3
+        ) {
+
+            const waitTime =
+                attempt * 2000;
+
+            console.log(
+                `⏳ Retrying in ${waitTime / 1000} seconds...`
+            );
+
+            await new Promise(
+                resolve =>
+                    setTimeout(
+                        resolve,
+                        waitTime
+                    )
+            );
+
+        } else {
+
+            throw error;
+
+        }
+
+    }
+
+}
 
 
         const geminiResponse =
