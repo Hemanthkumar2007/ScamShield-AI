@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // BACKEND
     // =========================================================
 
-    const BACKEND_URL = "https://scamshield-backend-y5rp.onrender.com";
+    const BACKEND_URL = "http://localhost:3000";
 
 
     // =========================================================
@@ -487,21 +487,24 @@ Send your personal details immediately.`;
 
                 const result = {
 
-                    risk: risk,
+    source:
+        data.source || "gemini",
 
-                    score: score,
+    risk: risk,
 
-                    summary:
-                        data.summary ||
-                        "ScamShield AI analyzed this content for suspicious patterns.",
+    score: score,
 
-                    signals: signals,
+    summary:
+        data.summary ||
+        "ScamShield AI analyzed this content for suspicious patterns.",
 
-                    recommendedAction:
-                        data.recommendedAction ||
-                        "Do not click suspicious links or share sensitive information. Verify the request independently."
+    signals: signals,
 
-                };
+    recommendedAction:
+        data.recommendedAction ||
+        "Do not click suspicious links or share sensitive information. Verify the request independently."
+
+};
 
 
                 console.log(
@@ -814,10 +817,25 @@ if (errorText.includes("429")) {
                 <div>
 
                     <span class="result-label">
-                        SCAMSHIELD AI ANALYSIS
-                    </span>
+    SCAMSHIELD AI ANALYSIS
+</span>
 
-                    <h3>
+<span class="result-source">
+    ${
+        result.source === "local-fallback"
+            ? "🛡️ SAFETY FALLBACK — LOCAL DETECTOR"
+            : "🤖 AI ANALYSIS — GEMINI"
+    }
+</span>
+<div class="analysis-status">
+    ${
+        result.source === "local-fallback"
+            ? "Analysis completed using ScamShield's local safety detector."
+            : "Analysis completed using Gemini AI with ScamShield safety rules."
+    }
+</div>
+
+<h3>
                         ${escapeHTML(
                             getRiskTitle(result.risk)
                         )}
