@@ -672,19 +672,13 @@ if (errorText.includes("429")) {
         // =====================================================
 
         const historyItem = {
-
-            text: analyzedText,
-
-            risk: result.risk,
-
-            score: result.score,
-
-            time:
-                new Date().toLocaleTimeString(),
-
-            mode: currentMode
-
-        };
+    text: analyzedText,
+    risk: result.risk,
+    score: result.score,
+    source: result.source || "gemini",
+    time: new Date().toLocaleTimeString(),
+    mode: currentMode
+};
 
 
         analysisHistory.unshift(
