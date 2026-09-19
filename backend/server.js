@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+
 require("dotenv").config({
     path: path.join(__dirname, "..", ".env")
 });
@@ -17,20 +18,16 @@ const PORT = process.env.PORT || 3000;
 // =====================================================
 
 if (!process.env.GEMINI_API_KEY) {
-
     console.error("❌ GEMINI_API_KEY is missing from .env");
-
 }
 
-const genAI =
-    new GoogleGenerativeAI(
-        process.env.GEMINI_API_KEY
-    );
+const genAI = new GoogleGenerativeAI(
+    process.env.GEMINI_API_KEY
+);
 
-const model =
-    genAI.getGenerativeModel({
-        model: "gemini-3.6-flash"
-    });
+const model = genAI.getGenerativeModel({
+    model: "gemini-3.6-flash"
+});
 
 
 // =====================================================
@@ -102,8 +99,7 @@ app.post("/analyze", async (req, res) => {
     }
 
 
-    const cleanText =
-        text.trim();
+    const cleanText = text.trim();
 
 
     if (cleanText.length > 5000) {
@@ -251,7 +247,6 @@ ${cleanText}
 `;
 
 
-
     // =================================================
     // CALL GEMINI
     // =================================================
@@ -265,59 +260,72 @@ ${cleanText}
 
         let result;
 
-for (let attempt = 1; attempt <= 3; attempt++) {
 
-    try {
+        // =================================================
+        // GEMINI RETRY SYSTEM
+        // =================================================
 
-        console.log(
-            `🔄 Gemini attempt ${attempt}/3`
-        );
+        for (let attempt = 1; attempt <= 3; attempt++) {
 
-        result =
-            await model.generateContent(
-                prompt
-            );
+            try {
 
-        break;
+                console.log(
+                    `🔄 Gemini attempt ${attempt}/3`
+                );
 
-    } catch (error) {
+                result =
+                    await model.generateContent(
+                        prompt
+                    );
 
-        console.error(
-            `⚠️ Gemini attempt ${attempt} failed:`,
-            error.status,
-            error.statusText
-        );
+                break;
 
-        if (
-            error.status === 503 &&
-            attempt < 3
-        ) {
+            } catch (error) {
 
-            const waitTime =
-                attempt * 2000;
+                console.error(
+                    `⚠️ Gemini attempt ${attempt} failed:`,
+                    error.status,
+                    error.statusText
+                );
 
-            console.log(
-                `⏳ Retrying in ${waitTime / 1000} seconds...`
-            );
 
-            await new Promise(
-                resolve =>
-                    setTimeout(
-                        resolve,
-                        waitTime
-                    )
-            );
+                // Retry only temporary 503 errors
+                if (
+                    error.status === 503 &&
+                    attempt < 3
+                ) {
 
-        } else {
+                    const waitTime =
+                        attempt * 2000;
 
-            throw error;
+                    console.log(
+                        `⏳ Retrying in ${waitTime / 1000} seconds...`
+                    );
+
+                    await new Promise(
+                        resolve =>
+                            setTimeout(
+                                resolve,
+                                waitTime
+                            )
+                    );
+
+                } else {
+
+                    // Send ALL other Gemini errors
+                    // to the local fallback
+                    throw error;
+
+                }
+
+            }
 
         }
 
-    }
 
-}
-
+        // =================================================
+        // GEMINI RESPONSE
+        // =================================================
 
         const geminiResponse =
             result.response;
@@ -349,6 +357,7 @@ for (let attempt = 1; attempt <= 3; attempt++) {
 
         let analysis;
 
+
         try {
 
             analysis =
@@ -366,14 +375,11 @@ for (let attempt = 1; attempt <= 3; attempt++) {
                 cleanedResponse
             );
 
-            return res.status(500).json({
-
-                success: false,
-
-                error:
-                    "AI returned an invalid analysis response."
-
-            });
+            // Invalid Gemini JSON should also
+            // use the local fallback
+            throw new Error(
+                "Gemini returned invalid JSON"
+            );
 
         }
 
@@ -540,29 +546,40 @@ for (let attempt = 1; attempt <= 3; attempt++) {
         console.log("");
         console.log("🎯 ANALYSIS COMPLETE");
         console.log("--------------------------------");
+
+        console.log(
+            "Source: Gemini AI"
+        );
+
         console.log(
             "Risk:",
             finalAnalysis.risk
         );
+
         console.log(
             "Score:",
             finalAnalysis.score
         );
+
         console.log(
             "Signals:",
             finalAnalysis.signals.length
         );
+
         console.log("--------------------------------");
 
 
         // =================================================
-        // SEND RESULT TO FRONTEND
+        // SEND GEMINI RESULT TO FRONTEND
         // =================================================
 
         return res.json({
 
             success:
                 true,
+
+            source:
+                "gemini",
 
             text:
                 cleanText,
@@ -591,212 +608,454 @@ for (let attempt = 1; attempt <= 3; attempt++) {
 
 
     // =================================================
-    // ERROR HANDLING
+    // LOCAL FALLBACK ERROR HANDLING
     // =================================================
 
     catch (error) {
 
-    console.error("");
-    console.error("❌ Gemini analysis error:");
-    console.error(error);
+        console.error("");
+        console.error("❌ Gemini analysis failed:");
+        console.error(error);
 
-    // =================================================
-    // GEMINI QUOTA FALLBACK
-    // =================================================
+        console.log("");
+        console.log(
+            "⚠️ Gemini unavailable or returned invalid data."
+        );
 
-    if (error?.status === 429) {
+        console.log(
+            "🛡️ Switching to local ScamShield fallback."
+        );
 
-        console.log("⚠️ Gemini quota exceeded.");
-        console.log("🛡️ Using local ScamShield fallback.");
+
+        // =================================================
+        // LOCAL TEXT ANALYSIS
+        // =================================================
 
         const textLower =
             cleanText.toLowerCase();
 
+
         const signals = [];
 
+
+        // =================================================
         // OTP
+        // =================================================
+
         if (
             textLower.includes("otp") ||
             textLower.includes("one time password")
         ) {
 
             signals.push({
-                title: "OTP request",
+
+                title:
+                    "OTP request",
+
                 description:
                     "The message mentions an OTP or one-time password. Never share an OTP with another person.",
-                severity: "CRITICAL"
+
+                severity:
+                    "CRITICAL"
+
             });
 
         }
 
-        // Urgency
+
+        // =================================================
+        // URGENCY
+        // =================================================
+
         if (
             textLower.includes("urgent") ||
             textLower.includes("immediately") ||
             textLower.includes("act now") ||
             textLower.includes("today") ||
-            textLower.includes("hurry")
+            textLower.includes("hurry") ||
+            textLower.includes("expires") ||
+            textLower.includes("last chance")
         ) {
 
             signals.push({
-                title: "Urgent or threatening language",
+
+                title:
+                    "Urgent or threatening language",
+
                 description:
-                    "The message uses urgency to pressure the recipient into taking action quickly.",
-                severity: "HIGH"
+                    "The message uses urgency or pressure to encourage immediate action.",
+
+                severity:
+                    "HIGH"
+
             });
 
         }
 
-        // Prize / reward
+
+        // =================================================
+        // PRIZE / REWARD
+        // =================================================
+
         if (
             textLower.includes("prize") ||
             textLower.includes("reward") ||
-            textLower.includes("₹") ||
             textLower.includes("winner") ||
-            textLower.includes("lottery")
+            textLower.includes("lottery") ||
+            textLower.includes("giveaway") ||
+            textLower.includes("congratulations") ||
+            textLower.includes("you won") ||
+            textLower.includes("₹") ||
+            textLower.includes("rs ") ||
+            textLower.includes("rupees")
         ) {
 
             signals.push({
-                title: "Prize or reward claim",
+
+                title:
+                    "Prize or reward claim",
+
                 description:
-                    "The message claims that the recipient has won or received money or a reward.",
-                severity: "HIGH"
+                    "The message contains language about winning money, prizes, rewards, or giveaways.",
+
+                severity:
+                    "HIGH"
+
             });
 
         }
 
-        // Payment / fee
+
+        // =================================================
+        // PAYMENT / MONEY
+        // =================================================
+
         if (
             textLower.includes("pay") ||
             textLower.includes("payment") ||
             textLower.includes("fee") ||
-            textLower.includes("registration fee")
+            textLower.includes("registration fee") ||
+            textLower.includes("transfer money") ||
+            textLower.includes("send money") ||
+            textLower.includes("deposit") ||
+            textLower.includes("upi")
         ) {
 
             signals.push({
-                title: "Payment request",
+
+                title:
+                    "Payment request",
+
                 description:
-                    "The message appears to request money, a payment, or a registration fee.",
-                severity: "HIGH"
+                    "The message appears to request money, payment, a fee, or a financial transaction.",
+
+                severity:
+                    "HIGH"
+
             });
 
         }
 
-        // Link
+
+        // =================================================
+        // LINK / URL
+        // =================================================
+
         if (
             textLower.includes("http://") ||
             textLower.includes("https://") ||
+            textLower.includes("www.") ||
             textLower.includes("click this link") ||
-            textLower.includes("click the link")
+            textLower.includes("click the link") ||
+            textLower.includes("open this link")
         ) {
 
             signals.push({
-                title: "Suspicious link or URL",
+
+                title:
+                    "Link or URL detected",
+
                 description:
-                    "The message contains a link or asks the recipient to click a link.",
-                severity: "HIGH"
+                    "The message contains a URL or asks the recipient to open or click a link. Verify the destination independently before opening it.",
+
+                severity:
+                    "HIGH"
+
             });
 
         }
 
-        // Personal information
+
+        // =================================================
+        // SENSITIVE INFORMATION
+        // =================================================
+
         if (
             textLower.includes("password") ||
             textLower.includes("cvv") ||
             textLower.includes("card number") ||
             textLower.includes("bank details") ||
-            textLower.includes("personal details")
+            textLower.includes("account number") ||
+            textLower.includes("personal details") ||
+            textLower.includes("aadhar") ||
+            textLower.includes("aadhaar") ||
+            textLower.includes("pan number")
         ) {
 
             signals.push({
-                title: "Sensitive information request",
+
+                title:
+                    "Sensitive information request",
+
                 description:
                     "The message appears to request sensitive personal, banking, or authentication information.",
-                severity: "CRITICAL"
+
+                severity:
+                    "CRITICAL"
+
             });
 
         }
 
-        // Fake job
+
+        // =================================================
+        // FAKE JOB
+        // =================================================
+
         if (
             textLower.includes("work-from-home") ||
             textLower.includes("work from home") ||
             textLower.includes("job offer") ||
-            textLower.includes("earn ₹")
+            textLower.includes("earn ₹") ||
+            textLower.includes("earn money") ||
+            textLower.includes("part time job") ||
+            textLower.includes("part-time job") ||
+            textLower.includes("easy money")
         ) {
 
             signals.push({
-                title: "Potentially suspicious job offer",
+
+                title:
+                    "Potentially suspicious job offer",
+
                 description:
-                    "The message contains characteristics commonly associated with suspicious job offers.",
-                severity: "HIGH"
+                    "The message contains characteristics commonly associated with suspicious or unsolicited job offers.",
+
+                severity:
+                    "HIGH"
+
             });
 
         }
 
-        // Calculate score
-        let score =
-            signals.length * 15;
+
+        // =================================================
+        // ACCOUNT THREAT
+        // =================================================
+
+        if (
+            textLower.includes("account will be blocked") ||
+            textLower.includes("account will be closed") ||
+            textLower.includes("account suspended") ||
+            textLower.includes("verify your account") ||
+            textLower.includes("kyc") ||
+            textLower.includes("your account")
+        ) {
+
+            signals.push({
+
+                title:
+                    "Account verification or threat",
+
+                description:
+                    "The message refers to account verification, suspension, blocking, or KYC-related action.",
+
+                severity:
+                    "HIGH"
+
+            });
+
+        }
+
+
+        // =================================================
+        // CALCULATE LOCAL SCORE
+        // =================================================
+
+        let score = 0;
+
+
+        signals.forEach(
+            (signal) => {
+
+                if (
+                    signal.severity === "CRITICAL"
+                ) {
+
+                    score += 30;
+
+                }
+                else if (
+                    signal.severity === "HIGH"
+                ) {
+
+                    score += 20;
+
+                }
+                else if (
+                    signal.severity === "MEDIUM"
+                ) {
+
+                    score += 10;
+
+                }
+                else {
+
+                    score += 5;
+
+                }
+
+            }
+        );
+
+
+        // Maximum score = 100
 
         if (score > 100) {
+
             score = 100;
+
         }
 
-        // Determine risk
+
+        // =================================================
+        // DETERMINE LOCAL RISK
+        // =================================================
+
         let risk = "LOW";
 
+
         if (score >= 70) {
+
             risk = "CRITICAL";
+
         }
         else if (score >= 45) {
+
             risk = "HIGH";
+
         }
         else if (score >= 20) {
+
             risk = "MEDIUM";
+
         }
+
+
+        // =================================================
+        // LOCAL SUMMARY
+        // =================================================
+
+        let summary;
+
+
+        if (signals.length > 0) {
+
+            summary =
+                "ScamShield detected suspicious patterns using its local safety detector because the AI analysis service was unavailable.";
+
+        }
+        else {
+
+            summary =
+                "The local safety detector did not find obvious scam indicators in this input. This does not guarantee that the content is safe.";
+
+        }
+
+
+        // =================================================
+        // LOCAL RECOMMENDED ACTION
+        // =================================================
+
+        let recommendedAction;
+
+
+        if (signals.length > 0) {
+
+            recommendedAction =
+                "Do not click suspicious links, send money, or share OTPs, passwords, card details, or other sensitive information. Verify the request independently through an official source.";
+
+        }
+        else {
+
+            recommendedAction =
+                "Remain cautious and independently verify unexpected messages, links, job offers, payment requests, or account notifications.";
+
+        }
+
+
+        // =================================================
+        // SEND LOCAL FALLBACK RESULT
+        // =================================================
+
+        console.log("");
+        console.log("🛡️ LOCAL FALLBACK ANALYSIS COMPLETE");
+        console.log("--------------------------------");
+
+        console.log(
+            "Source: Local Detector"
+        );
+
+        console.log(
+            "Risk:",
+            risk
+        );
+
+        console.log(
+            "Score:",
+            score
+        );
+
+        console.log(
+            "Signals:",
+            signals.length
+        );
+
+        console.log("--------------------------------");
+
 
         return res.json({
 
-            success: true,
+            success:
+                true,
 
-            text: cleanText,
+            source:
+                "local-fallback",
 
-            mode: mode,
+            text:
+                cleanText,
 
-            risk: risk,
+            mode:
+                mode,
 
-            score: score,
+            risk:
+                risk,
+
+            score:
+                score,
 
             summary:
-                signals.length > 0
-                    ? "ScamShield detected suspicious patterns using its local safety fallback because the AI service is temporarily unavailable."
-                    : "No obvious scam indicators were detected by the local safety fallback.",
+                summary,
 
-            signals: signals,
+            signals:
+                signals,
 
             recommendedAction:
-                signals.length > 0
-                    ? "Do not click suspicious links, send money, or share OTPs, passwords, card details, or other sensitive information. Verify the request independently."
-                    : "Remain cautious and independently verify unexpected messages or requests."
+                recommendedAction
+
         });
 
     }
-
-
-    // =================================================
-    // OTHER BACKEND ERRORS
-    // =================================================
-
-    return res.status(500).json({
-
-        success: false,
-
-        error:
-            "Unable to analyze the message."
-
-    });
-
-}
 
 });
 
@@ -825,6 +1084,10 @@ app.listen(
 
         console.log(
             "📡 POST /analyze"
+        );
+
+        console.log(
+            "🛡️ Gemini + Local Fallback Enabled"
         );
 
         console.log(
